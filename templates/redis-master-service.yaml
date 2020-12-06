@@ -1,0 +1,22 @@
+{{- if .Values.exposeMasterService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- if .Values.serviceAccount }}
+  annotations:
+  {{- toYaml .Values.serviceAccount.annotations | nindent 4 }}
+  {{- end }}
+  namespace: {{ .Values.namespace }}
+  name: {{ include "redis-pod-labeler.masterservice" . }}
+  labels:
+  {{- include "redis-pod-labeler.labels" . | nindent 4 }}
+spec:
+  ports:
+    - name: redis
+      protocol: TCP
+      port: {{ .Values.redisPort }}
+      targetPort: redis
+  selector:
+    {{ include "redis-pod-labeler.rolekey" . | nindent 4 }}: master
+{{- end }}
+

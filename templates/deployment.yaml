@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "redis-pod-labeler.fullname" . }}
+  labels:
+  {{- include "redis-pod-labeler.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+  {{- include "redis-pod-labeler.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+    {{- include "redis-pod-labeler.selectorLabels" . | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: platform-container-register
+      serviceAccountName: {{ include "redis-pod-labeler.serviceAccountName" . }}
+      securityContext:
+      {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "myrepo/redis-pod-labeler:latest"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - ./redis-labeler.py
+            - --namespace={{ .Values.namespace }}    # namespace which deployed redis
+            - --svc-selector={{ .Values.redisPodSelector.keyValuePair }} # key=value of to match and get the redis-ha announce svc
+            - --update-period={{ .Values.labelUpdateFrequency }}   # how frequent labelling should happen( default to 60 seconds = 1 minute )
+            - --redis-cluster-name={{ .Values.redisClusterName }} # redis cluster name
+            - --redis-headless-svc-name={{ .Values.headlessName }} # redis headless service name
+            - --company-domain={{ .Values.companyDomain }}  # company domain
+            - --redis-sentinel_port={{ .Values.sentinelPort }} # sentinel port
+            {{- if .Values.skipTlsVerify.enabled }}
+            - --insecure-skip-tls-verify
+            {{- end }}
+            {{- if .Values.verbose.enabled }}
+            - --verbose
+          {{- end }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - ps uaxw | egrep 'python' | grep -v 'grep'
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - ps uaxw | egrep 'python' | grep -v 'grep'
+          resources:
+      {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+  {{- toYaml . | nindent 8 }}
+  {{- end }}
