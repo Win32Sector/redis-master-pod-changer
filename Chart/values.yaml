@@ -18,7 +18,7 @@ redisPodSelector:
   keyValuePair: "app=redis"
 
 # redis header service name
-headlessName: "r1-ss-redis-headless"
+headlessName: "redis-headless"
 
 # expose redis master via service
 exposeMasterService:

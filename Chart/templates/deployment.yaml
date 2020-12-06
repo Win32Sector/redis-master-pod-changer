@@ -21,8 +21,6 @@ spec:
       labels:
     {{- include "redis-pod-labeler.selectorLabels" . | nindent 8 }}
     spec:
-      imagePullSecrets:
-        - name: platform-container-register
       serviceAccountName: {{ include "redis-pod-labeler.serviceAccountName" . }}
       securityContext:
       {{- toYaml .Values.podSecurityContext | nindent 8 }}
